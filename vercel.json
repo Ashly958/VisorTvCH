@@ -1,16 +1,10 @@
 {
   "buildCommand": "cd client && npm install && npm run build",
   "outputDirectory": "client/dist",
-  "functions": {
-    "api/*.php": {
-      "runtime": "vercel-php@0.7.2",
-      "includeFiles": "database/**,api/**"
-    }
-  },
   "rewrites": [
     {
-      "source": "/uploads/:match*",
-      "destination": "/api/index.php"
+      "source": "/api/:match*",
+      "destination": "/api/index.js"
     },
     {
       "source": "/((?!api|uploads).*)",
