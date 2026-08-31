@@ -74,6 +74,9 @@ const AdminSedes = () => {
 
   useEffect(() => {
     loadSedes();
+    const handleUpdate = () => loadSedes();
+    window.addEventListener('visorDataUpdated', handleUpdate);
+    return () => window.removeEventListener('visorDataUpdated', handleUpdate);
   }, [loadSedes]);
 
   const handleOpenCreate = () => {

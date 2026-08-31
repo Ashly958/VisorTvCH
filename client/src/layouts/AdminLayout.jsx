@@ -35,6 +35,9 @@ const AdminLayout = () => {
 
   useEffect(() => {
     loadSedes();
+    const handleUpdate = () => loadSedes();
+    window.addEventListener('visorDataUpdated', handleUpdate);
+    return () => window.removeEventListener('visorDataUpdated', handleUpdate);
   }, [location.pathname, loadSedes]);
 
   const handleLogout = () => {

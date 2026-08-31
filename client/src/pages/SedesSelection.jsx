@@ -42,8 +42,13 @@ const SedesSelection = () => {
 
   useEffect(() => {
     loadSedes();
+    const handleUpdate = () => loadSedes();
+    window.addEventListener('visorDataUpdated', handleUpdate);
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
+    return () => {
+      window.removeEventListener('visorDataUpdated', handleUpdate);
+      clearInterval(timer);
+    };
   }, [loadSedes]);
 
   const filteredSedes = (Array.isArray(sedes) ? sedes : []).filter((s) =>

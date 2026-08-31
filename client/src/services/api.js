@@ -178,6 +178,9 @@ function getLocalData(key, defaultVal) {
 function setLocalData(key, data) {
   try {
     localStorage.setItem(key, JSON.stringify(data));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('visorDataUpdated', { detail: { key } }));
+    }
   } catch (e) {
     console.error('Error writing to localStorage:', e);
   }

@@ -37,6 +37,9 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
+    const handleUpdate = () => fetchDashboardData();
+    window.addEventListener('visorDataUpdated', handleUpdate);
+    return () => window.removeEventListener('visorDataUpdated', handleUpdate);
   }, [fetchDashboardData]);
 
   const handleRefresh = () => {
