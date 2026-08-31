@@ -380,11 +380,20 @@ export const sedesService = {
 };
 
 // -------------------------------------------------------------
-// 5. MEDIA SERVICE (LocalStorage + Cloud Sync)
+// 5. MEDIA SERVICE (Cloud Sync + LocalStorage Fallback)
 // -------------------------------------------------------------
 export const mediaService = {
   getBySede: async (sedeId, activeOnly = false) => {
     const sid = parseInt(sedeId, 10);
+    try {
+      const res = await api.get(`/media.php?sede_id=${sid}${activeOnly ? '&active_only=1' : ''}`);
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        return res;
+      }
+    } catch (err) {
+      console.warn('API sync warning for media, using local cache:', err);
+    }
+
     let media = getLocalData(STORAGE_KEYS.MEDIA, INITIAL_MEDIA);
     let items = media.filter((m) => m.sede_id === sid);
 
@@ -393,13 +402,15 @@ export const mediaService = {
     }
     items.sort((a, b) => (a.order_num || 0) - (b.order_num || 0));
 
-    // Background sync
-    api.get(`/media.php?sede_id=${sid}${activeOnly ? '&active_only=1' : ''}`).catch(() => {});
-
     return { data: { success: true, data: items } };
   },
 
   getById: async (id) => {
+    try {
+      const res = await api.get(`/media.php?id=${id}`);
+      if (res.data?.success) return res;
+    } catch {}
+
     const media = getLocalData(STORAGE_KEYS.MEDIA, INITIAL_MEDIA);
     const m = media.find((item) => item.id === parseInt(id, 10));
     if (!m) throw new Error('Archivo multimedia no encontrado');
@@ -407,6 +418,15 @@ export const mediaService = {
   },
 
   addUrl: async (data) => {
+    try {
+      const res = await api.post('/media.php?action=add-url', data);
+      if (res.data?.success) {
+        return res;
+      }
+    } catch (err) {
+      console.warn('API add-url failed, falling back to local store:', err);
+    }
+
     const media = getLocalData(STORAGE_KEYS.MEDIA, INITIAL_MEDIA);
     const sid = parseInt(data.sede_id, 10);
     const maxId = media.reduce((max, m) => Math.max(max, m.id || 0), 0);
@@ -434,14 +454,23 @@ export const mediaService = {
     media.push(newItem);
     setLocalData(STORAGE_KEYS.MEDIA, media);
 
-    // Sync to API
-    api.post('/media.php?action=add-url', data).catch(() => {});
-
     return { data: { success: true, message: 'Contenido añadido exitosamente', data: newItem } };
   },
 
   upload: async (sedeId, formData, onUploadProgress) => {
     const sid = parseInt(sedeId, 10);
+    try {
+      const res = await api.post(`/media.php?sede_id=${sid}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress,
+      });
+      if (res.data?.success) {
+        return res;
+      }
+    } catch (err) {
+      console.warn('Direct upload fallback:', err);
+    }
+
     const media = getLocalData(STORAGE_KEYS.MEDIA, INITIAL_MEDIA);
     let maxId = media.reduce((max, m) => Math.max(max, m.id || 0), 0);
     let maxOrder = media.filter((m) => m.sede_id === sid).reduce((max, m) => Math.max(max, m.order_num || 0), 0);
@@ -457,8 +486,6 @@ export const mediaService = {
       maxId++;
       maxOrder++;
       const isVideo = file.type?.startsWith('video/') || /\.(mp4|webm|mov|mkv|avi)$/i.test(file.name);
-
-      // Create instant local URL for fast preview and playback
       const localUrl = URL.createObjectURL(file);
 
       const newItem = {
@@ -485,12 +512,6 @@ export const mediaService = {
 
     setLocalData(STORAGE_KEYS.MEDIA, media);
 
-    // Also attempt remote background upload to API if possible
-    api.post(`/media.php?sede_id=${sid}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      onUploadProgress,
-    }).catch(() => {});
-
     if (onUploadProgress) {
       onUploadProgress({ loaded: 100, total: 100 });
     }
@@ -506,6 +527,11 @@ export const mediaService = {
 
   update: async (id, data) => {
     const mid = parseInt(id, 10);
+    try {
+      const res = await api.put(`/media.php?id=${mid}`, data);
+      if (res.data?.success) return res;
+    } catch {}
+
     const media = getLocalData(STORAGE_KEYS.MEDIA, INITIAL_MEDIA);
     const idx = media.findIndex((m) => m.id === mid);
     if (idx !== -1) {
@@ -513,37 +539,43 @@ export const mediaService = {
       setLocalData(STORAGE_KEYS.MEDIA, media);
     }
 
-    // Sync to API
-    api.put(`/media.php?id=${mid}`, data).catch(() => {});
-
     return { data: { success: true, message: 'Contenido actualizado exitosamente' } };
   },
 
   delete: async (id) => {
     const mid = parseInt(id, 10);
+    try {
+      const res = await api.delete(`/media.php?id=${mid}`);
+      if (res.data?.success) return res;
+    } catch {}
+
     let media = getLocalData(STORAGE_KEYS.MEDIA, INITIAL_MEDIA);
     media = media.filter((m) => m.id !== mid);
     setLocalData(STORAGE_KEYS.MEDIA, media);
-
-    // Sync to API
-    api.delete(`/media.php?id=${mid}`).catch(() => {});
 
     return { data: { success: true, message: 'Archivo eliminado exitosamente' } };
   },
 
   bulkDelete: async (ids) => {
+    try {
+      const res = await api.post('/media.php?action=bulk-delete', { ids });
+      if (res.data?.success) return res;
+    } catch {}
+
     const targetIds = (ids || []).map((id) => parseInt(id, 10));
     let media = getLocalData(STORAGE_KEYS.MEDIA, INITIAL_MEDIA);
     media = media.filter((m) => !targetIds.includes(m.id));
     setLocalData(STORAGE_KEYS.MEDIA, media);
 
-    // Sync to API
-    api.post('/media.php?action=bulk-delete', { ids }).catch(() => {});
-
     return { data: { success: true, message: 'Archivos eliminados exitosamente' } };
   },
 
   reorder: async (orders) => {
+    try {
+      const res = await api.post('/media.php?action=reorder', { orders });
+      if (res.data?.success) return res;
+    } catch {}
+
     const media = getLocalData(STORAGE_KEYS.MEDIA, INITIAL_MEDIA);
     (orders || []).forEach((o) => {
       const m = media.find((item) => item.id === o.id);
@@ -551,20 +583,28 @@ export const mediaService = {
     });
     setLocalData(STORAGE_KEYS.MEDIA, media);
 
-    // Sync to API
-    api.post('/media.php?action=reorder', { orders }).catch(() => {});
-
     return { data: { success: true, message: 'Orden guardado' } };
   }
 };
 
 // -------------------------------------------------------------
-// 6. PLAYLIST / TV VISOR SERVICE (LocalStorage + Cloud Sync)
+// 6. PLAYLIST / TV VISOR SERVICE (Cloud Sync + LocalStorage Fallback)
 // -------------------------------------------------------------
 export const playlistService = {
   getPlaylist: async (sedeIdOrSlug) => {
-    const sedes = getLocalData(STORAGE_KEYS.SEDES, INITIAL_SEDES);
     const isId = typeof sedeIdOrSlug === 'number' || /^\d+$/.test(sedeIdOrSlug);
+    const param = isId ? `sede_id=${sedeIdOrSlug}` : `slug=${sedeIdOrSlug}`;
+
+    try {
+      const res = await api.get(`/playlist.php?${param}`);
+      if (res.data?.success && res.data.playlist) {
+        return res;
+      }
+    } catch (err) {
+      console.warn('API playlist fetch failed, using local cache:', err);
+    }
+
+    const sedes = getLocalData(STORAGE_KEYS.SEDES, INITIAL_SEDES);
     const sid = isId ? parseInt(sedeIdOrSlug, 10) : null;
     const s = sedes.find((item) => (isId ? item.id === sid : item.slug === sedeIdOrSlug));
 
@@ -605,6 +645,16 @@ export const playlistService = {
   },
 
   checkVersion: async (sedeIdOrSlug) => {
+    const isId = typeof sedeIdOrSlug === 'number' || /^\d+$/.test(sedeIdOrSlug);
+    const param = isId ? `sede_id=${sedeIdOrSlug}` : `slug=${sedeIdOrSlug}`;
+
+    try {
+      const res = await api.get(`/playlist.php?${param}&check_version=1`);
+      if (res.data?.success) {
+        return res;
+      }
+    } catch {}
+
     const res = await playlistService.getPlaylist(sedeIdOrSlug);
     return {
       data: {
