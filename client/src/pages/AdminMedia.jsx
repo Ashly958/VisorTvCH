@@ -107,6 +107,25 @@ const AdminMedia = () => {
   const handleFilesSelected = async (files) => {
     if (!files || files.length === 0 || !selectedSedeId) return;
 
+    // Check if any file exceeds Vercel Serverless 4.5MB limit on cloud
+    const isCloud = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    const oversizedFile = isCloud ? Array.from(files).find((f) => f.size > 4.5 * 1024 * 1024) : null;
+
+    if (oversizedFile) {
+      showMessage(
+        `El archivo "${oversizedFile.name}" (${(oversizedFile.size / (1024 * 1024)).toFixed(1)} MB) supera el límite de 4.5 MB de Vercel para subida directa. Use "Añadir Video por URL / CDN" para videos en alta calidad.`,
+        'error'
+      );
+      setUrlFormData((prev) => ({
+        ...prev,
+        title: oversizedFile.name.replace(/\.[^/.]+$/, ''),
+        type: oversizedFile.type.startsWith('video/') || /\.(mp4|webm|mov|mkv)$/i.test(oversizedFile.name) ? 'video' : 'image'
+      }));
+      setShowUrlModal(true);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
     setUploading(true);
     setUploadProgress(0);
 
@@ -131,7 +150,8 @@ const AdminMedia = () => {
       }
     } catch (err) {
       console.error('Error uploading media:', err);
-      showMessage(err.response?.data?.error || 'Error al subir los archivos', 'error');
+      const errMsg = err.response?.data?.error || err.message || 'Error al subir los archivos';
+      showMessage(typeof errMsg === 'string' ? errMsg : 'Error al subir los archivos', 'error');
     } finally {
       setUploading(false);
       setUploadProgress(0);
