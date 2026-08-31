@@ -11,18 +11,23 @@ function get_db() {
     }
 
     try {
-        $db = new PDO('sqlite:' . DB_FILE);
+        $dbFile = DB_FILE;
+        $dbDir = dirname($dbFile);
+        if (!is_dir($dbDir)) {
+            @mkdir($dbDir, 0777, true);
+        }
+
+        $db = new PDO('sqlite:' . $dbFile);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-        $db->exec('PRAGMA foreign_keys = ON;');
-        $db->exec('PRAGMA journal_mode = WAL;');
-        $db->exec('PRAGMA synchronous = NORMAL;');
-        $db->exec('PRAGMA cache_size = 10000;');
-        $db->exec('PRAGMA temp_store = MEMORY;');
+        
+        try { $db->exec('PRAGMA foreign_keys = ON;'); } catch (Throwable $t) {}
+        try { $db->exec('PRAGMA synchronous = NORMAL;'); } catch (Throwable $t) {}
+        try { $db->exec('PRAGMA temp_store = MEMORY;'); } catch (Throwable $t) {}
         
         initialize_schema($db);
         return $db;
-    } catch (PDOException $e) {
+    } catch (Throwable $e) {
         json_error('Error de conexión a la base de datos: ' . $e->getMessage(), 500);
     }
 }

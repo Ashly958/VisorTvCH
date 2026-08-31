@@ -5,9 +5,46 @@
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/db.php';
 
-// If requested directly:
 $uri = $_SERVER['REQUEST_URI'] ?? '';
-$path = parse_url($uri, PHP_URL_PATH);
+$path = parse_url($uri, PHP_URL_PATH) ?? '';
+
+// Handle serving uploaded media files if routed through api/index.php (e.g. on Vercel)
+if (strpos($path, '/uploads/') !== false) {
+    $relative = preg_replace('#^.*?/uploads/#', '', $path);
+    $filePath = UPLOAD_DIR . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative);
+    
+    if (!file_exists($filePath)) {
+        // Check fallback in api/uploads
+        $fallback = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative);
+        if (file_exists($fallback)) {
+            $filePath = $fallback;
+        }
+    }
+
+    if (file_exists($filePath) && is_file($filePath)) {
+        $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $mimes = [
+            'mp4' => 'video/mp4',
+            'webm' => 'video/webm',
+            'mov' => 'video/quicktime',
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            'gif' => 'image/gif',
+            'svg' => 'image/svg+xml'
+        ];
+        $contentType = $mimes[$ext] ?? mime_content_type($filePath) ?: 'application/octet-stream';
+        
+        header('Content-Type: ' . $contentType);
+        header('Content-Length: ' . filesize($filePath));
+        header('Cache-Control: public, max-age=86400');
+        readfile($filePath);
+        exit();
+    } else {
+        json_error('Archivo multimedia no encontrado', 404);
+    }
+}
 
 // Simple health check response
 json_response([

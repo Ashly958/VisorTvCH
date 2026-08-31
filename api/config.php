@@ -31,9 +31,14 @@ if ($reqMethod === 'OPTIONS') {
     exit();
 }
 
+// Global exception and error handler to ensure JSON responses on Vercel
+set_exception_handler(function($e) {
+    json_error('Error del servidor: ' . $e->getMessage(), 500);
+});
+
 // System Paths (with Vercel / Serverless /tmp fallback)
 define('BASE_DIR', dirname(__DIR__));
-$isServerless = getenv('VERCEL') || getenv('AWS_LAMBDA_FUNCTION_NAME') || (!is_writable(BASE_DIR . DIRECTORY_SEPARATOR . 'database') && is_dir('/tmp'));
+$isServerless = isset($_ENV['VERCEL']) || getenv('VERCEL') || isset($_SERVER['LAMBDA_TASK_ROOT']) || getenv('AWS_LAMBDA_FUNCTION_NAME') || (!is_writable(BASE_DIR) && is_dir('/tmp'));
 
 if ($isServerless) {
     define('DB_FILE', '/tmp/visor_tv.sqlite');
@@ -41,6 +46,16 @@ if ($isServerless) {
     $sourceDb = BASE_DIR . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . 'visor_tv.sqlite';
     if (!file_exists(DB_FILE) && file_exists($sourceDb)) {
         @copy($sourceDb, DB_FILE);
+    }
+    // Copy seed demo media files to /tmp/uploads/media if available
+    $sourceUploads = __DIR__ . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'media';
+    if (is_dir($sourceUploads) && !is_dir('/tmp/uploads/media')) {
+        @mkdir('/tmp/uploads/media', 0777, true);
+        foreach (scandir($sourceUploads) as $item) {
+            if ($item !== '.' && $item !== '..') {
+                @copy($sourceUploads . DIRECTORY_SEPARATOR . $item, '/tmp/uploads/media/' . $item);
+            }
+        }
     }
 } else {
     define('DB_FILE', BASE_DIR . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . 'visor_tv.sqlite');
