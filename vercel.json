@@ -3,11 +3,7 @@
   "outputDirectory": "client/dist",
   "rewrites": [
     {
-      "source": "/api/:match*",
-      "destination": "https://visortvapi.vercel.app/api/:match*"
-    },
-    {
-      "source": "/((?!api).*)",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]
