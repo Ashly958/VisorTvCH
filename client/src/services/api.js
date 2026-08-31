@@ -242,10 +242,20 @@ export const authService = {
 };
 
 // -------------------------------------------------------------
-// 4. SEDES SERVICE (LocalStorage + Cloud Sync)
+// 4. SEDES SERVICE (Cloud Sync + LocalStorage Fallback)
 // -------------------------------------------------------------
 export const sedesService = {
   getAll: async (publicOnly = false) => {
+    try {
+      const res = await api.get(`/sedes.php${publicOnly ? '?public=1' : ''}`);
+      if (res.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
+        setLocalData(STORAGE_KEYS.SEDES, res.data.data);
+        return res;
+      }
+    } catch (err) {
+      console.warn('API sync warning, using local cache:', err);
+    }
+
     let sedes = getLocalData(STORAGE_KEYS.SEDES, INITIAL_SEDES);
     const media = getLocalData(STORAGE_KEYS.MEDIA, INITIAL_MEDIA);
 
@@ -269,13 +279,15 @@ export const sedesService = {
       };
     });
 
-    // Sync in background to API if reachable
-    api.get(`/sedes.php${publicOnly ? '?public=1' : ''}`).catch(() => {});
-
     return { data: { success: true, data: enriched } };
   },
 
   getById: async (id) => {
+    try {
+      const res = await api.get(`/sedes.php?id=${id}`);
+      if (res.data?.success) return res;
+    } catch {}
+
     const sedes = getLocalData(STORAGE_KEYS.SEDES, INITIAL_SEDES);
     const s = sedes.find((item) => item.id === parseInt(id, 10));
     if (!s) throw new Error('Sede no encontrada');
@@ -283,6 +295,11 @@ export const sedesService = {
   },
 
   getBySlug: async (slug) => {
+    try {
+      const res = await api.get(`/sedes.php?slug=${slug}`);
+      if (res.data?.success) return res;
+    } catch {}
+
     const sedes = getLocalData(STORAGE_KEYS.SEDES, INITIAL_SEDES);
     const s = sedes.find((item) => item.slug === slug);
     if (!s) throw new Error('Sede no encontrada');
