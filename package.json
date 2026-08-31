@@ -1,0 +1,18 @@
+{
+  "name": "visor-tv-sistemas",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistema de Pantallas Digitales y Señalización Digital para Sedes y Sucursales",
+  "scripts": {
+    "build": "npm --prefix client install && npm --prefix client run build",
+    "dev": "npm --prefix client run dev",
+    "lint": "npm --prefix client run lint"
+  },
+  "keywords": [
+    "digital-signage",
+    "visor-tv",
+    "smart-tv",
+    "pantallas"
+  ],
+  "author": "Antigravity Systems"
+}
