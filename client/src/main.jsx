@@ -45,7 +45,7 @@ class ErrorBoundary extends Component {
               Visor TV Sistemas
             </h1>
             <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '24px', lineHeight: '1.5' }}>
-              Se produjo una interrupción: {this.state.error?.message || 'Error desconocido'}.
+              Se produjo una interrupción: {typeof this.state.error === 'string' ? this.state.error : (this.state.error?.message || 'Error inesperado')}.
             </p>
             <button
               onClick={() => {

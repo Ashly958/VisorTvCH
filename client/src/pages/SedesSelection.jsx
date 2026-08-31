@@ -128,7 +128,7 @@ const SedesSelection = () => {
         {/* Error Notification */}
         {error && (
           <div className="mb-6 p-4 rounded-xl bg-red-950/40 border border-red-800 text-red-300 text-sm flex items-center justify-between">
-            <span>{error}</span>
+            <span>{typeof error === 'string' ? error : (error?.message || 'Error de conexión con la API')}</span>
             <button
               onClick={loadSedes}
               className="px-3 py-1 bg-red-900/60 hover:bg-red-800 rounded-lg text-xs font-medium text-white transition-colors"

@@ -3,11 +3,23 @@ import { authService } from '../services/api';
 
 const AuthContext = createContext(null);
 
+const sanitizeUser = (raw) => {
+  if (raw && typeof raw === 'object' && (raw.username || raw.id)) {
+    return {
+      id: raw.id || 1,
+      username: String(raw.username || 'admin'),
+      name: String(raw.name || raw.username || 'Administrador'),
+      role: String(raw.role || 'admin')
+    };
+  }
+  return null;
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     try {
       const saved = localStorage.getItem('visor_tv_user');
-      return saved ? JSON.parse(saved) : null;
+      return saved ? sanitizeUser(JSON.parse(saved)) : null;
     } catch {
       return null;
     }

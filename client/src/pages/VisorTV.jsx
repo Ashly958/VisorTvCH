@@ -311,7 +311,7 @@ const VisorTV = () => {
           <AlertCircle className="w-8 h-8" />
         </div>
         <h2 className="text-3xl font-extrabold text-white mb-2">Error de Conexión</h2>
-        <p className="text-slate-400 text-base max-w-md mb-8">{error || 'Sede no encontrada'}</p>
+        <p className="text-slate-400 text-base max-w-md mb-8">{typeof error === 'string' ? error : (error?.message || 'Sede no encontrada')}</p>
         <div className="flex items-center gap-4">
           <button
             onClick={() => loadPlaylist(true)}
