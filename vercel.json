@@ -4,10 +4,10 @@
   "rewrites": [
     {
       "source": "/api/:match*",
-      "destination": "/api/index.js"
+      "destination": "https://visortvapi.vercel.app/api/:match*"
     },
     {
-      "source": "/((?!api|uploads).*)",
+      "source": "/((?!api).*)",
       "destination": "/index.html"
     }
   ]
